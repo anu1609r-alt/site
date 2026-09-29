@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniGuide KZ — университеты и поступление в Казахстане</title>
+  <meta name="description" content="Платформа для абитуриентов Казахстана: находите, сравнивайте университеты, специальности и рассчитывайте шансы на грант." />
+  
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="UniGuide KZ — твой путь в университет начинается здесь" />
+  <meta property="og:description" content="Единый современный портал об университетах и программах высшего образования Казахстана." />
+  <meta property="og:type" content="website" />
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#1e1b4b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & Babel Standalone CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Smooth transitions and scrollbar */
+    html {
+      scroll-behavior: smooth;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen selection:bg-brand-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- ИКОНКИ (Обертка для чистого рендеринга без сторонних багов) ---
+    const Icon = ({ name, size = 18, className = "" }) => {
+      const spanRef = useRef(null);
+      useEffect(() => {
+        if (spanRef.current && window.lucide) {
+          spanRef.current.innerHTML = `<i data-lucide="${name}" class="${className}" style="width: ${size}px; height: ${size}px; display: inline-block;"></i>`;
+          window.lucide.createIcons({ root: spanRef.current });
+        }
+      }, [name, size, className]);
+      return <span ref={spanRef} className="inline-flex items-center justify-center align-middle" />;
+    };
+
+    // --- НАЧАЛЬНЫЕ ДЕМОНСТРАЦИОННЫЕ ДАННЫЕ С ПОДДЕРЖКОЙ ФОТО ---
+    const INITIAL_UNIVERSITIES = [
+      {
+        id: "nu",
+        name: "Nazarbayev University",
+        shortName: "NU",
+        city: "Астана",
+        type: "Автономная организация образования",
+        rating: 4.9,
+        programsCount: 42,
+        hasGrants: true,
+        costEstimate: "Демо: от 2 800 000 ₸ / Есть гранты NU",
+        language: "Английский",
+        studyFormat: "Очная",
+        description: "Ведущий исследовательский университет международного уровня в столице Казахстана. Обучение ведется на английском языке.",
+        coverPhoto: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1000&q=80",
+        address: "г. Астана, пр. Кабанбай батыра, 53",
+        website: "https://nu.edu.kz",
+        phone: "+7 (7172) 70-66-88",
+        programs: ["Computer Science", "Economics", "Mechanical Engineering", "Biomedical Sciences", "Robotics"],
+        admissionReqs: "IELTS 6.5+, вступительные экзамены по направлениям, эссе и портфолио.",
+        isDemo: true
+      },
+      {
+        id: "mnu",
+        name: "Maqsut Narikbayev University (KAZGUU)",
+        shortName: "MNU",
+        city: "Астана",
+        type: "Частный",
+        rating: 4.8,
+        programsCount: 28,
+        hasGrants: true,
+        costEstimate: "Демо: от 1 900 000 ₸ / Госгранты",
+        language: "Казахский, Русский, Английский",
+        studyFormat: "Очная",
+        description: "Флагман юридического и гуманитарно-экономического образования в Казахстане с высокими академическими стандартами.",
+        coverPhoto: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1000&q=80",
+        address: "г. Астана, Коргалжынское шоссе, 8",
+        website: "https://kazguu.kz",
+        phone: "+7 (7172) 70-30-30",
+        programs: ["Юриспруденция", "Международное право", "Финансы", "IT в бизнесе", "Переводческое дело"],
+        admissionReqs: "ЕНТ профильные предметы (История/Человек и общество, География/Математика), внутреннее собеседование.",
+        isDemo: true
+      },
+      {
+        id: "enu",
+        name: "Евразийский национальный университет им. Л.Н. Гумилева",
+        shortName: "ENU",
+        city: "Астана",
+        type: "Национальный",
+        rating: 4.7,
+        programsCount: 110,
+        hasGrants: true,
+        costEstimate: "Демо: от 1 100 000 ₸ / Госгранты",
+        language: "Казахский, Русский, Английский",
+        studyFormat: "Очная",
+        description: "Один из крупнейших национальных вузов страны, предлагающий широкий спектр программ от инженерии до филологии.",
+        coverPhoto: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1000&q=80",
+        address: "г. Астана, ул. Сатпаева, 2",
+        website: "https://enu.kz",
+        phone: "+7 (7172) 70-95-00",
+        programs: ["Информационные системы", "Архитектура", "Журналистика", "Международные отношения", "Ядерная физика"],
+        admissionReqs: "ЕНТ по профильным предметам, проходной балл на грант согласно общему конкурсу РК.",
+        isDemo: true
+      },
+      {
+        id: "satbayev",
+        name: "Satbayev University",
+        shortName: "SU",
+        city: "Алматы",
+        type: "Национальный исследовательский",
+        rating: 4.7,
+        programsCount: 75,
+        hasGrants: true,
+        costEstimate: "Демо: от 1 200 000 ₸ / Госгранты",
+        language: "Казахский, Русский, Английский",
+        studyFormat: "Очная",
+        description: "Старейший и престижнейший технический университет Казахстана, центр горно-металлургических и IT разработок.",
+        coverPhoto: "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=1000&q=80",
+        address: "г. Алматы, ул. Сатпаева, 22",
+        website: "https://satbayev.university",
+        phone: "+7 (727) 292-60-25",
+        programs: ["Горное дело", "Нефтегазовое дело", "Кибербезопасность", "Автоматизация", "Строительство"],
+        admissionReqs: "ЕНТ: Математика + Физика или Математика + Информатика.",
+        isDemo: true
+      },
+      {
+        id: "kimep",
+        name: "KIMEP University",
+        shortName: "KIMEP",
+        city: "Алматы",
+        type: "Частный",
+        rating: 4.8,
+        programsCount: 30,
+        hasGrants: true,
+        costEstimate: "Демо: от 2 600 000 ₸ / Внутренние гранты",
+        language: "Английский",
+        studyFormat: "Очная",
+        description: "Американская модель образования в сердце Алматы. Лидер в бизнес-администрировании, экономике и медиа.",
+        coverPhoto: "https://images.unsplash.com/photo-1592280771190-3e2e4d571952?auto=format&fit=crop&w=1000&q=80",
+        address: "г. Алматы, пр. Абая, 4",
+        website: "https://kimep.kz",
+        phone: "+7 (727) 270-42-13",
+        programs: ["Бизнес-администрирование", "Маркетинг", "Финансы", "Медиа и коммуникации"],
+        admissionReqs: "Внутренний тест KEPT / IELTS, ЕНТ для резидентов РК.",
+        isDemo: true
+      },
+      {
+        id: "sdu",
+        name: "SDU University",
+        shortName: "SDU",
+        city: "Алматы (Каскелен)",
+        type: "Частный",
+        rating: 4.6,
+        programsCount: 45,
+        hasGrants: true,
+        costEstimate: "Демо: от 1 600 000 ₸ / Олимпиада SPT",
+        language: "Английский, Казахский",
+        studyFormat: "Очная",
+        description: "Современный кампус за городом, сильнейшая инженерно-техническая и педагогическая школа.",
+        coverPhoto: "https://images.unsplash.com/photo-1519452635265-7b1fbfd1e4e0?auto=format&fit=crop&w=1000&q=80",
+        address: "Алматинская обл., г. Каскелен, ул. Абылай хана, 1/1",
+        website: "https://sdu.edu.kz",
+        phone: "+7 (727) 307-95-65",
+        programs: ["Computer Science", "Information Systems", "Педагогика английского", "Журналистика"],
+        admissionReqs: "ЕНТ, внутренний экзамен SPT на скидки и гранты.",
+        isDemo: true
+      },
+      {
+        id: "buketov",
+        name: "Карагандинский университет им. Е.А. Букетова",
+        shortName: "КарУ",
+        city: "Караганда",
+        type: "Государственный",
+        rating: 4.5,
+        programsCount: 88,
+        hasGrants: true,
+        costEstimate: "Демо: от 750 000 ₸ / Госгранты",
+        language: "Казахский, Русский",
+        studyFormat: "Очная, Дистанционная",
+        description: "Крупнейший региональный классический университет Центрального Казахстана с вековыми научными традициями.",
+        coverPhoto: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=80",
+        address: "г. Караганда, ул. Университетская, 28",
+        website: "https://buketov.edu.kz",
+        phone: "+7 (7212) 77-03-85",
+        programs: ["Педагогика", "Химия", "Биология", "Юриспруденция", "Экономика"],
+        admissionReqs: "ЕНТ профильные дисциплины в зависимости от выбранного кластера.",
+        isDemo: true
+      }
+    ];
+
+    const INITIAL_SPECIALTIES = [
+      {
+        id: "it",
+        title: "Информационные технологии (IT)",
+        category: "IT",
+        description: "Проектирование, разработка и поддержка программного обеспечения, искусственного интеллекта и сетевых структур.",
+        subjects: "Математика + Информатика",
+        careers: "Software Engineer, Data Analyst, Frontend/Backend Developer, DevOps",
+        universities: ["NU", "Satbayev University", "SDU University", "ENU", "MNU"]
+      },
+      {
+        id: "law",
+        title: "Юриспруденция и Право",
+        category: "Право",
+        description: "Изучение нормативно-правовых актов, судебной системы, корпоративного права и правозащитной деятельности.",
+        subjects: "Всемирная история + Человек. Общество. Право",
+        careers: "Юрист, Адвокат, Судья, Корпоративный комплаенс-офицер",
+        universities: ["MNU", "КарУ", "ENU"]
+      },
+      {
+        id: "finance",
+        title: "Финансы и Экономика",
+        category: "Финансы",
+        description: "Анализ финансовых рынков, корпоративное управление, инвестиционные стратегии и банковский сектор.",
+        subjects: "Математика + География",
+        careers: "Финансовый аналитик, Аудитор, Инвестиционный консультант, Риск-менеджер",
+        universities: ["KIMEP", "MNU", "NU", "ENU"]
+      },
+      {
+        id: "med",
+        title: "Общая Медицина",
+        category: "Медицина",
+        description: "Фундаментальная подготовка врачей общей практики, хирургов и исследователей в области здравоохранения.",
+        subjects: "Биология + Химия",
+        careers: "Врач-терапевт, Хирург, Медицинский исследователь, Консультант",
+        universities: ["NU (School of Medicine)", "Астана Медицинский Университет", "КазНМУ"]
+      },
+      {
+        id: "ir",
+        title: "Международные отношения",
+        category: "Международные отношения",
+        description: "Дипломатический этикет, геополитика, урегулирование международных конфликтов и мировая торговля.",
+        subjects: "Всемирная история + Иностранный язык",
+        careers: "Дипломат, Аналитик внешнеэкономической деятельности, Сотрудник международных организаций (ООН, ОБСЕ)",
+        universities: ["ENU", "KIMEP", "MNU"]
+      },
+      {
+        id: "engineering",
+        title: "Инженерия и Робототехника",
+        category: "Инженерия",
+        description: "Проектирование автоматизированных машин, индустриальных станков и аппаратных микроэлектронных систем.",
+        subjects: "Математика + Физика",
+        careers: "Инженер-конструктор, Робототехник, Специалист по АСУ ТП",
+        universities: ["NU", "Satbayev University"]
+      }
+    ];
+
+    const QUIZ_QUESTIONS = [
+      {
+        id: 1,
+        question: "Какая деятельность приносит вам наибольшее удовольствие?",
+        options: [
+          { label: "A — Изучать законы, анализировать правила и документы", category: "Право" },
+          { label: "B — Считать бюджет, анализировать графики и цифры", category: "Финансы" },
+          { label: "C — Писать программный код, исследовать алгоритмы", category: "IT" },
+          { label: "D — Конструировать физические механизмы или схемы", category: "Инженерия" },
+          { label: "E — Помогать людям в лечении, изучать биологию", category: "Медицина" }
+        ]
+      },
+      {
+        id: 2,
+        question: "Какой школьный предмет вам давался легче и с большим интересом?",
+        options: [
+          { label: "A — Человек. Общество. Право / Всемирная история", category: "Право" },
+          { label: "B — Алгебра и Геометрия / География", category: "Финансы" },
+          { label: "C — Информатика", category: "IT" },
+          { label: "D — Физика", category: "Инженерия" },
+          { label: "E — Химия и Биология", category: "Медицина" }
+        ]
+      },
+      {
+        id: 3,
+        question: "В какой рабочей обстановке вам комфортнее всего?",
+        options: [
+          { label: "A — В зале судебных заседаний или переговорных комнатах", category: "Право" },
+          { label: "B — В финансовом департаменте или консалтинговой компании", category: "Финансы" },
+          { label: "C — В гибком технологичном офисе или удаленно за ноутбуком", category: "IT" },
+          { label: "D — В лаборатории, на производстве или в проектном бюро", category: "Инженерия" },
+          { label: "E — В клинике, диагностическом центре или больнице", category: "Медицина" }
+        ]
+      },
+      {
+        id: 4,
+        question: "С какой проблемой вам интереснее всего разбираться?",
+        options: [
+          { label: "A — Разрешение этического или правового спора двух сторон", category: "Право" },
+          { label: "B — Оптимизация расходов и прогнозирование прибыли", category: "Финансы" },
+          { label: "C — Ошибка в коде приложения или сбой базы данных", category: "IT" },
+          { label: "D — Поломка оборудования или проектирование узла детали", category: "Инженерия" },
+          { label: "E — Поиск причин заболевания по симптомам", category: "Медицина" }
+        ]
+      },
+      {
+        id: 5,
+        question: "Какой проект вы бы выбрали для реализации?",
+        options: [
+          { label: "A — Законопроект о защите прав потребителей цифровых услуг", category: "Право" },
+          { label: "B — Стартап по инвестициям в ценные бумаги", category: "Финансы" },
+          { label: "C — Разработка мобильного приложения с искусственным интеллектом", category: "IT" },
+          { label: "D — Сборка действующей модели автономного дрона", category: "Инженерия" },
+          { label: "E — Исследование воздействия экологии на здоровье горожан", category: "Медицина" }
+        ]
+      },
+      {
+        id: 6,
+        question: "Что для вас важнее в финальном результате работы?",
+        options: [
+          { label: "A — Восторжествовавшая справедливость и соблюдение порядка", category: "Право" },
+          { label: "B — Высокая экономическая окупаемость и финансовый рост", category: "Финансы" },
+          { label: "C — Элегантный работающий программный продукт", category: "IT" },
+          { label: "D — Надежное материальное устройство или конструкция", category: "Инженерия" },
+          { label: "E — Спасенное здоровье и улучшение самочувствия человека", category: "Медицина" }
+        ]
+      },
+      {
+        id: 7,
+        question: "Какие книги или статьи вы открываете чаще?",
+        options: [
+          { label: "A — Разборы резонансных судебных процессов и законов", category: "Право" },
+          { label: "B — Рейтинги Forbes, обзоры рынков и инвестиций", category: "Финансы" },
+          { label: "C — Технические статьи на Habr, новости IT-гигантов", category: "IT" },
+          { label: "D — Научно-популярные видео о механизмах и космонавтике", category: "Инженерия" },
+          { label: "E — Медицинские блоги, открытия в генетике и анатомии", category: "Медицина" }
+        ]
+      },
+      {
+        id: 8,
+        question: "Как вы принимаете важные решения?",
+        options: [
+          { label: "A — Опираясь на кодексы, регламенты и аргументированные прецеденты", category: "Право" },
+          { label: "B — Проводя анализ соотношения выгоды и риска", category: "Финансы" },
+          { label: "C — Проверяя гипотезы через логику и тесты", category: "IT" },
+          { label: "D — Исследуя физические свойства и функциональность", category: "Инженерия" },
+          { label: "E — Оценивая влияние на состояние и здоровье близких", category: "Медицина" }
+        ]
+      },
+      {
+        id: 9,
+        question: "Каким навыком вы больше всего гордитесь?",
+        options: [
+          { label: "A — Умением убеждать словом и аргументировать позицию", category: "Право" },
+          { label: "B — Умением планировать расходы и бережливо обращаться с деньгами", category: "Финансы" },
+          { label: "C — Быстрой обучаемостью работе с новым ПО и гаджетами", category: "IT" },
+          { label: "D — Способностью починить вещь своими руками", category: "Инженерия" },
+          { label: "E — Способностью оказать первую помощь и проявить эмпатию", category: "Медицина" }
+        ]
+      },
+      {
+        id: 10,
+        question: "Кем вы видите себя через 10 лет?",
+        options: [
+          { label: "A — Известным юристом или общественным советником", category: "Право" },
+          { label: "B — Финансовым директором или управляющим инвестиционного фонда", category: "Финансы" },
+          { label: "C — Главным архитектором IT-систем или основателем tech-стартапа", category: "IT" },
+          { label: "D — Главным инженером крупного инфраструктурного проекта", category: "Инженерия" },
+          { label: "E — Опытным врачом-специалистом или заведующим клиникой", category: "Медицина" }
+        ]
+      }
+    ];
+
+    // --- СЕРВИС ХРАНИЛИЩА (LOCALSTORAGE) ---
+    const StorageService = {
+      getUniversities: () => {
+        const stored = localStorage.getItem("ug_universities");
+        if (!stored) {
+          localStorage.setItem("ug_universities", JSON.stringify(INITIAL_UNIVERSITIES));
+          return INITIAL_UNIVERSITIES;
+        }
+        return JSON.parse(stored);
+      },
+      saveUniversities: (data) => {
+        localStorage.setItem("ug_universities", JSON.stringify(data));
+      },
+      getSpecialties: () => INITIAL_SPECIALTIES,
+      getFavorites: () => {
+        const f = localStorage.getItem("ug_favorites");
+        return f ? JSON.parse(f) : { universities: [], specialties: [] };
+      },
+      saveFavorites: (data) => {
+        localStorage.setItem("ug_favorites", JSON.stringify(data));
+      },
+      getCompareList: () => {
+        const c = localStorage.getItem("ug_compare");
+        return c ? JSON.parse(c) : [];
+      },
+      saveCompareList: (data) => {
+        localStorage.setItem("ug_compare", JSON.stringify(data));
+      },
+      getUser: () => {
+        const u = localStorage.getItem("ug_user");
+        return u ? JSON.parse(u) : null;
+      },
+      saveUser: (user) => {
+        localStorage.setItem("ug_user", JSON.stringify(user));
+      },
+      removeUser: () => {
+        localStorage.removeItem("ug_user");
+      },
+      getQuizResult: () => {
+        const q = localStorage.getItem("ug_quiz_result");
+        return q ? JSON.parse(q) : null;
+      },
+      saveQuizResult: (res) => {
+        localStorage.setItem("ug_quiz_result", JSON.stringify(res));
+      }
+    };
+
+    // --- ОБЩИЕ UI КОМПОНЕНТЫ ---
+    const Badge = ({ children, color = "blue" }) => {
+      const colors = {
+        blue: "bg-brand-50 text-brand-700 border-brand-200",
+        green: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        purple: "bg-purple-50 text-purple-700 border-purple-200",
+        amber: "bg-amber-50 text-amber-700 border-amber-200"
+      };
+      return (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colors[color] || colors.blue}`}>
+          {children}
+        </span>
+      );
+    };
+
+    const DemoAlert = () => (
+      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg my-4 flex items-start gap-3">
+        <Icon name="alert-circle" size={20} className="text-amber-600 mt-0.5" />
+        <div className="text-xs text-amber-800 leading-relaxed">
+          <strong>Внимание (Демонстрационные данные):</strong> Тарифы, проходные баллы и списки программ приведены в качестве демонстрации функционала платформы UniGuide KZ. Всегда сверяйте актуальную информацию на официальных сайтах вузов и Национального центра тестирования (НЦТ).
+        </div>
+      </div>
+    );
+
+    // --- ГЛАВНОЕ ПРИЛОЖЕНИЕ ---
+    function App() {
+      // Маршрутизация (Hash-based для надежной работы на GitHub Pages без серверных перенаправлений)
+      const [currentRoute, setCurrentRoute] = useState(window.location.hash || "#/");
+      const [universities, setUniversities] = useState(StorageService.getUniversities);
+      const [favorites, setFavorites] = useState(StorageService.getFavorites);
+      const [compareList, setCompareList] = useState(StorageService.getCompareList);
+      const [user, setUser] = useState(StorageService.getUser);
+      const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+      const [notification, setNotification] = useState(null);
+
+      // Глобальный поиск
+      const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+      const [searchQuery, setSearchQuery] = useState("");
+
+      useEffect(() => {
+        const handleHashChange = () => {
+          setCurrentRoute(window.location.hash || "#/");
+          window.scrollTo(0, 0);
+          setMobileMenuOpen(false);
+        };
+        window.addEventListener("hashchange", handleHashChange);
+        return () => window.removeEventListener("hashchange", handleHashChange);
+      }, []);
+
+      const showNotify = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(null), 3000);
+      };
+
+      const toggleFavoriteUniversity = (id) => {
+        const next = { ...favorites };
+        if (next.universities.includes(id)) {
+          next.universities = next.universities.filter(x => x !== id);
+          showNotify("Удалено из избранного");
+        } else {
+          next.universities.push(id);
+          showNotify("Добавлено в избранное ❤️");
+        }
+        setFavorites(next);
+        StorageService.saveFavorites(next);
+      };
+
+      const toggleFavoriteSpecialty = (id) => {
+        const next = { ...favorites };
+        if (next.specialties.includes(id)) {
+          next.specialties = next.specialties.filter(x => x !== id);
+          showNotify("Удалено из избранных специальностей");
+        } else {
+          next.specialties.push(id);
+          showNotify("Специальность сохранена ❤️");
+        }
+        setFavorites(next);
+        StorageService.saveFavorites(next);
+      };
+
+      const toggleCompare = (id) => {
+        let next = [...compareList];
+        if (next.includes(id)) {
+          next = next.filter(x => x !== id);
+          showNotify("Удалено из сравнения");
+        } else {
+          if (next.length >= 3) {
+            alert("Вы можете одновременно сравнивать не более 3 университетов.");
+            return;
+          }
+          next.push(id);
+          showNotify("Добавлено к сравнению ⚖️");
+        }
+        setCompareList(next);
+        StorageService.saveCompareList(next);
+      };
+
+      const clearCompare = () => {
+        setCompareList([]);
+        StorageService.saveCompareList([]);
+        showNotify("Список сравнения очищен");
+      };
+
+      // Роутинг параметров (например, #/universities/nu)
+      const routeParts = currentRoute.replace("#/", "").split("/");
+      const rootPath = routeParts[0] || "";
+      const pathParam = routeParts[1] || "";
+
+      return (
+        <div className="flex flex-col min-h-screen">
+          {/* Notification Toast */}
+          {notification && (
+            <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-bounce">
+              <Icon name="check-circle" size={18} className="text-emerald-400" />
+              <span className="text-sm font-medium">{notification}</span>
+            </div>
+          )}
+
+          {/* НАВБАР */}
+          <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center h-20">
+                {/* Logo */}
+                <a href="#/" className="flex items-center gap-3 group">
+                  <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-bold shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
+                    <Icon name="graduation-cap" size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <span className="text-xl font-bold tracking-tight text-slate-900 group-hover:text-brand-600 transition-colors">UniGuide</span>
+                    <span className="text-xs ml-1 font-extrabold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200">KZ</span>
+                  </div>
+                </a>
+
+                {/* Desktop Menu */}
+                <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+                  <a href="#/" className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${rootPath === "" ? "text-brand-600 bg-brand-50" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}>Главная</a>
+                  <a href="#/universities" className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${rootPath === "universities" ? "text-brand-600 bg-brand-50" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}>Университеты</a>
+                  <a href="#/specialties" className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${rootPath === "specialties" ? "text-brand-600 bg-brand-50" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}>Специальности</a>
+                  <a href="#/compare" className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${rootPath === "compare" ? "text-brand-600 bg-brand-50" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}>
+                    Сравнение
+                    {compareList.length > 0 && (
+                      <span className="bg-brand-600 text-white text-xs px-1.5 py-0.2 rounded-full font-bold">{compareList.length}</span>
+                    )}
+                  </a>
+                  <a href="#/calculator" className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${rootPath === "calculator" ? "text-brand-600 bg-brand-50" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}>Калькулятор</a>
+                  <a href="#/quiz" className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${rootPath === "quiz" ? "text-brand-600 bg-brand-50" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}>Тест</a>
+                </nav>
+
+                {/* Right Actions */}
+                <div className="hidden md:flex items-center space-x-3">
+                  <button 
+                    onClick={() => setGlobalSearchOpen(true)}
+                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="Быстрый поиск"
+                  >
+                    <Icon name="search" size={20} />
+                  </button>
+
+                  <a 
+                    href="#/favorites" 
+                    className="relative p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="Избранное"
+                  >
+                    <Icon name="heart" size={20} />
+                    {(favorites.universities.length + favorites.specialties.length) > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+                    )}
+                  </a>
+
+                  {user ? (
+                    <div className="flex items-center gap-2">
+                      <a href="#/profile" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 text-sm font-semibold text-slate-800">
+                        <div className="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold uppercase">
+                          {user.name.slice(0, 2)}
+                        </div>
+                        <span className="max-w-[100px] truncate">{user.name}</span>
+                      </a>
+                      {user.role === 'admin' && (
+                        <a href="#/admin" className="p-2 text-slate-500 hover:text-brand-600 rounded-lg" title="Админ-панель">
+                          <Icon name="shield-check" size={20} />
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <a href="#/login" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-all shadow-sm shadow-brand-500/30">
+                      <Icon name="log-in" size={16} />
+                      Войти
+                    </a>
+                  )}
+                </div>
+
+                {/* Mobile hamburger */}
+                <div className="flex md:hidden items-center gap-2">
+                  <button 
+                    onClick={() => setGlobalSearchOpen(true)}
+                    className="p-2 text-slate-600 rounded-lg"
+                  >
+                    <Icon name="search" size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    className="p-2 text-slate-600 rounded-lg hover:bg-slate-100"
+                  >
+                    <Icon name={mobileMenuOpen ? "x" : "menu"} size={24} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Navigation Drawer */}
+            {mobileMenuOpen && (
+              <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-2">
+                <a href="#/" className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-100">Главная</a>
+                <a href="#/universities" className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-100">Университеты</a>
+                <a href="#/specialties" className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-100">Специальности</a>
+                <a href="#/compare" className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-100">
+                  Сравнение {compareList.length > 0 && `(${compareList.length})`}
+                </a>
+                <a href="#/calculator" className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-100">Калькулятор поступления</a>
+                <a href="#/quiz" className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-100">Тест направлений</a>
+                <a href="#/favorites" className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-100">Избранное</a>
+                {user ? (
+                  <>
+                    <a href="#/profile" className="block px-3 py-2 rounded-lg text-base font-medium text-brand-600 bg-brand-50">Личный кабинет ({user.name})</a>
+                    {user.role === "admin" && (
+                      <a href="#/admin" className="block px-3 py-2 rounded-lg text-base font-medium text-purple-700 bg-purple-50">Панель администратора</a>
+                    )}
+                  </>
+                ) : (
+                  <a href="#/login" className="block text-center mt-3 px-4 py-2.5 rounded-xl font-semibold text-white bg-brand-600">Войти в аккаунт</a>
+                )}
+              </div>
+            )}
+          </header>
+
+          {/* ГЛОБАЛЬНЫЙ ПОИСК МОДАЛКА С DEBOUNCE */}
+          {globalSearchOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-start justify-center pt-20 px-4">
+              <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-200">
+                <div className="p-4 border-b border-slate-100 flex items-center gap-3">
+                  <Icon name="search" size={20} className="text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Быстрый поиск: 'Право', 'Астана', 'NU', 'IT'..."
+                    className="w-full text-base focus:outline-none text-slate-800 placeholder-slate-400"
+                    autoFocus
+                  />
+                  <button 
+                    onClick={() => { setGlobalSearchOpen(false); setSearchQuery(""); }}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  >
+                    <Icon name="x" size={20} />
+                  </button>
+                </div>
+
+                <div className="max-h-96 overflow-y-auto p-4 space-y-4">
+                  {searchQuery.trim() === "" ? (
+                    <div className="text-center py-8 text-sm text-slate-400">
+                      Введите название вуза, специальности, предмета или города для мгновенного поиска.
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Университеты */}
+                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Университеты</div>
+                      {universities.filter(u => 
+                        u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        u.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        u.shortName.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).length === 0 ? (
+                        <div className="text-xs text-slate-400 mb-4">Ничего не найдено среди вузов</div>
+                      ) : (
+                        <div className="space-y-1 mb-4">
+                          {universities
+                            .filter(u => 
+                              u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              u.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              u.shortName.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .slice(0, 4)
+                            .map(u => (
+                              <a
+                                key={u.id}
+                                href={`#/universities/${u.id}`}
+                                onClick={() => setGlobalSearchOpen(false)}
+                                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors"
+                              >
+                                <div>
+                                  <div className="text-sm font-semibold text-slate-900">{u.name}</div>
+                                  <div className="text-xs text-slate-500">{u.city} • {u.type}</div>
+                                </div>
+                                <Icon name="chevron-right" size={16} className="text-slate-400" />
+                              </a>
+                            ))}
+                        </div>
+                      )}
+
+                      {/* Специальности */}
+                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Специальности</div>
+                      {StorageService.getSpecialties().filter(s => 
+                        s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        s.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        s.subjects.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).length === 0 ? (
+                        <div className="text-xs text-slate-400">Ничего не найдено среди специальностей</div>
+                      ) : (
+                        <div className="space-y-1">
+                          {StorageService.getSpecialties()
+                            .filter(s => 
+                              s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              s.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              s.subjects.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .slice(0, 4)
+                            .map(s => (
+                              <a
+                                key={s.id}
+                                href={`#/specialties`}
+                                onClick={() => setGlobalSearchOpen(false)}
+                                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors"
+                              >
+                                <div>
+                                  <div className="text-sm font-semibold text-slate-900">{s.title}</div>
+                                  <div className="text-xs text-slate-500">Предметы ЕНТ: {s.subjects}</div>
+                                </div>
+                                <Icon name="arrow-up-right" size={16} className="text-slate-400" />
+                              </a>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ОСНОВНОЙ КОНТЕНТ (РОУТЕР) */}
+          <main className="flex-1">
+            {rootPath === "" && (
+              <HomePage 
+                universities={universities} 
+                favorites={favorites} 
+                compareList={compareList} 
+                onToggleFav={toggleFavoriteUniversity}
+                onToggleCompare={toggleCompare}
+              />
+            )}
+            {rootPath === "universities" && !pathParam && (
+              <UniversitiesCatalogPage 
+                universities={universities} 
+                favorites={favorites} 
+                compareList={compareList} 
+                onToggleFav={toggleFavoriteUniversity}
+                onToggleCompare={toggleCompare}
+              />
+            )}
+            {rootPath === "universities" && pathParam && (
+              <UniversityDetailPage 
+                id={pathParam} 
+                universities={universities}
+                favorites={favorites}
+                compareList={compareList}
+                onToggleFav={toggleFavoriteUniversity}
+                onToggleCompare={toggleCompare}
+                onUpdateUniversity={(updated) => {
+                  const next = universities.map(u => u.id === updated.id ? updated : u);
+                  setUniversities(next);
+                  StorageService.saveUniversities(next);
+                  showNotify("Фото и данные университета обновлены!");
+                }}
+              />
+            )}
+            {rootPath === "specialties" && (
+              <SpecialtiesPage 
+                favorites={favorites} 
+                onToggleFav={toggleFavoriteSpecialty} 
+              />
+            )}
+            {rootPath === "compare" && (
+              <ComparePage 
+                compareList={compareList} 
+                universities={universities} 
+                onRemoveCompare={toggleCompare} 
+                onClearCompare={clearCompare} 
+              />
+            )}
+            {rootPath === "calculator" && (
+              <CalculatorPage universities={universities} />
+            )}
+            {rootPath === "quiz" && (
+              <QuizPage onResultSave={(res) => {
+                StorageService.saveQuizResult(res);
+                showNotify("Результаты теста сохранены!");
+              }} />
+            )}
+            {rootPath === "favorites" && (
+              <FavoritesPage 
+                favorites={favorites} 
+                universities={universities} 
+                specialties={StorageService.getSpecialties()}
+                onToggleFavUni={toggleFavoriteUniversity}
+                onToggleFavSpec={toggleFavoriteSpecialty}
+              />
+            )}
+            {rootPath === "login" && (
+              <AuthPage 
+                onLogin={(userData) => {
+                  setUser(userData);
+                  StorageService.saveUser(userData);
+                  window.location.hash = "#/profile";
+                }} 
+              />
+            )}
+            {rootPath === "profile" && (
+              <ProfilePage 
+                user={user} 
+                onLogout={() => {
+                  setUser(null);
+                  StorageService.removeUser();
+                  window.location.hash = "#/";
+                }}
+                universities={universities}
+                specialties={StorageService.getSpecialties()}
+                favorites={favorites}
+              />
+            )}
+            {rootPath === "admin" && (
+              <AdminPage 
+                universities={universities} 
+                onSaveUniversities={(data) => {
+                  setUniversities(data);
+                  StorageService.saveUniversities(data);
+                  showNotify("Изменения сохранены в базе!");
+                }}
+              />
+            )}
+            {!["", "universities", "specialties", "compare", "calculator", "quiz", "favorites", "login", "profile", "admin"].includes(rootPath) && (
+              <NotFoundPage />
+            )}
+          </main>
+
+          {/* ПОДВАЛ */}
+          <footer className="bg-slate-900 text-slate-400 text-sm mt-20 border-t border-slate-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-white font-bold text-lg">
+                    <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
+                      <Icon name="graduation-cap" size={20} className="text-white" />
+                    </div>
+                    <span>UniGuide KZ</span>
+                  </div>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    «Твой путь в университет начинается здесь.» Все необходимое для поступления в вузы Казахстана в едином технологичном решении.
+                  </p>
+                  <div className="text-xs text-slate-500">
+                    © 2026 UniGuide KZ. Все права защищены.
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-wider">Платформа</h4>
+                  <ul className="space-y-2.5 text-xs">
+                    <li><a href="#/universities" className="hover:text-white transition-colors">Каталог университетов</a></li>
+                    <li><a href="#/specialties" className="hover:text-white transition-colors">Специальности и гранты</a></li>
+                    <li><a href="#/compare" className="hover:text-white transition-colors">Сравнение вузов</a></li>
+                    <li><a href="#/calculator" className="hover:text-white transition-colors">Калькулятор шансов</a></li>
+                    <li><a href="#/quiz" className="hover:text-white transition-colors">Профориентационный тест</a></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-wider">Помощь и инфо</h4>
+                  <ul className="space-y-2.5 text-xs">
+                    <li><a href="#/" className="hover:text-white transition-colors">Частые вопросы (FAQ)</a></li>
+                    <li><span className="text-slate-500">Служба поддержки: info@uniguide.kz</span></li>
+                    <li><span className="text-slate-500">г. Астана, Республика Казахстан</span></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-wider">Правовая информация</h4>
+                  <ul className="space-y-2.5 text-xs">
+                    <li><a href="#/" className="hover:text-white transition-colors">Политика конфиденциальности</a></li>
+                    <li><a href="#/" className="hover:text-white transition-colors">Пользовательское соглашение</a></li>
+                    <li><span className="text-amber-400/80 text-[11px] block mt-2">Все баллы и цены являются демонстрационными и подлежат проверке на ресурсах вузов.</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 1. ГЛАВНАЯ СТРАНИЦА (HOME PAGE)
+    // ==========================================
+    function HomePage({ universities, favorites, compareList, onToggleFav, onToggleCompare }) {
+      const [searchCity, setSearchCity] = useState("all");
+      const [searchQuery, setSearchQuery] = useState("");
+
+      const handleQuickSearch = (e) => {
+        e.preventDefault();
+        window.location.hash = `#/universities`;
+      };
+
+      return (
+        <div>
+          {/* HERO SECTION */}
+          <section className="relative overflow-hidden pt-12 pb-20 lg:pt-20 lg:pb-28 bg-gradient-to-b from-brand-50/60 to-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-100/70 border border-brand-200 text-brand-800 text-xs font-semibold">
+                    <Icon name="sparkles" size={14} className="text-brand-600" />
+                    Новый сезон поступления 2026
+                  </div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
+                    Найди университет, который подходит <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-indigo-600">именно тебе</span>
+                  </h1>
+                  <p className="text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
+                    «Сравнивай университеты Казахстана, изучай специальности и планируй поступление в одном месте.»
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+                    <a 
+                      href="#/universities" 
+                      className="w-full sm:w-auto px-6 py-3.5 rounded-xl font-semibold text-white bg-brand-600 hover:bg-brand-700 transition shadow-lg shadow-brand-500/25 text-center flex items-center justify-center gap-2"
+                    >
+                      <Icon name="compass" size={18} />
+                      Найти университет
+                    </a>
+                    <a 
+                      href="#/specialties" 
+                      className="w-full sm:w-auto px-6 py-3.5 rounded-xl font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition text-center flex items-center justify-center gap-2"
+                    >
+                      <Icon name="book-open" size={18} />
+                      Подобрать специальность
+                    </a>
+                  </div>
+                </div>
+
+                {/* 3D-Style Visual Container */}
+                <div className="lg:col-span-5 relative flex justify-center">
+                  <div className="relative w-full max-w-md aspect-square rounded-3xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 p-1 shadow-2xl">
+                    <div className="w-full h-full bg-slate-900 rounded-[22px] overflow-hidden relative flex flex-col justify-between p-8 text-white">
+                      <div className="absolute -top-24 -right-24 w-56 h-56 bg-brand-500/30 rounded-full blur-3xl"></div>
+                      <div className="flex justify-between items-center z-10">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-brand-300">
+                          <Icon name="map-pin" size={16} /> Казахстан
+                        </div>
+                        <Badge color="green">Приемная кампания 2026</Badge>
+                      </div>
+
+                      <div className="my-auto z-10 space-y-3">
+                        <div className="text-3xl font-extrabold tracking-tight">Твой навигатор по вузам</div>
+                        <p className="text-xs text-slate-300">Более 50 университетов, честные сравнения, фильтры грантов и объективные характеристики без рекламы.</p>
+                      </div>
+
+                      <div className="z-10 grid grid-cols-2 gap-3 pt-4 border-t border-slate-800 text-xs">
+                        <div className="bg-slate-800/80 p-3 rounded-xl">
+                          <div className="text-slate-400">Гранты РК</div>
+                          <div className="text-base font-bold text-emerald-400">Доступно</div>
+                        </div>
+                        <div className="bg-slate-800/80 p-3 rounded-xl">
+                          <div className="text-slate-400">Анализ шансов</div>
+                          <div className="text-base font-bold text-brand-300">Калькулятор</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* БЫСТРЫЙ ПОИСК И ФИЛЬТРЫ */}
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-6">
+              <form onSubmit={handleQuickSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Icon name="search" size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Поиск университета, специальности или города..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+
+                <div>
+                  <select
+                    value={searchCity}
+                    onChange={(e) => setSearchCity(e.target.value)}
+                    className="w-full px-3 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  >
+                    <option value="all">Все города Казахстана</option>
+                    <option value="Астана">Астана</option>
+                    <option value="Алматы">Алматы</option>
+                    <option value="Караганда">Караганда</option>
+                  </select>
+                </div>
+
+                <div>
+                  <a
+                    href="#/universities"
+                    className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm transition flex items-center justify-center gap-2"
+                  >
+                    <Icon name="sliders-horizontal" size={16} />
+                    Найти
+                  </a>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          {/* СТАТИСТИКА */}
+          <section className="py-16 bg-white border-b border-slate-100 mt-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div className="space-y-1">
+                  <div className="text-3xl sm:text-4xl font-extrabold text-brand-600">50+</div>
+                  <div className="text-sm font-medium text-slate-500">Университетов в каталоге</div>
+                  <span className="text-[10px] text-slate-400">Демонстрационная база</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-3xl sm:text-4xl font-extrabold text-brand-600">300+</div>
+                  <div className="text-sm font-medium text-slate-500">Образовательных программ</div>
+                  <span className="text-[10px] text-slate-400">Демонстрационная база</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-3xl sm:text-4xl font-extrabold text-brand-600">20+</div>
+                  <div className="text-sm font-medium text-slate-500">Городов Казахстана</div>
+                  <span className="text-[10px] text-slate-400">Охват регионов</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-3xl sm:text-4xl font-extrabold text-brand-600">1000+</div>
+                  <div className="text-sm font-medium text-slate-500">Абитуриентов уже с нами</div>
+                  <span className="text-[10px] text-slate-400">Сообщество платформы</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ПОПУЛЯРНЫЕ УНИВЕРСИТЕТЫ */}
+          <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Популярные университеты</h2>
+                <p className="text-sm text-slate-500 mt-1">Ознакомьтесь с ведущими учебными заведениями страны</p>
+              </div>
+              <a href="#/universities" className="mt-4 sm:mt-0 text-sm font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1">
+                Все университеты <Icon name="arrow-right" size={16} />
+              </a>
+            </div>
+
+            <DemoAlert />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {universities.slice(0, 6).map((uni) => (
+                <UniversityCard
+                  key={uni.id}
+                  uni={uni}
+                  isFav={favorites.universities.includes(uni.id)}
+                  isCompared={compareList.includes(uni.id)}
+                  onToggleFav={() => onToggleFav(uni.id)}
+                  onToggleCompare={() => onToggleCompare(uni.id)}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* FAQ СЕКЦИЯ С АККОРДЕОНОМ */}
+          <section className="py-16 bg-slate-100/60 border-t border-slate-200">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-10">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Часто задаваемые вопросы</h2>
+                <p className="text-sm text-slate-500 mt-1">Ответы на ключевые вопросы о работе с платформой UniGuide KZ</p>
+              </div>
+              <FAQAccordion />
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // КАРТОЧКА УНИВЕРСИТЕТА (С ПОДДЕРЖКОЙ ФОТО)
+    // ==========================================
+    function UniversityCard({ uni, isFav, isCompared, onToggleFav, onToggleCompare }) {
+      return (
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-brand-200 transition duration-300 flex flex-col group">
+          <div className="relative h-48 bg-slate-100 overflow-hidden">
+            <img 
+              src={uni.coverPhoto} 
+              alt={uni.name} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent"></div>
+            
+            <div className="absolute top-3 left-3 flex gap-2">
+              <Badge color="blue">{uni.city}</Badge>
+              {uni.hasGrants && <Badge color="green">Гранты</Badge>}
+            </div>
+
+            <button
+              onClick={onToggleFav}
+              className={`absolute top-3 right-3 p-2 rounded-xl backdrop-blur-md transition ${isFav ? "bg-rose-500 text-white" : "bg-white/80 text-slate-700 hover:bg-white"}`}
+              title="Добавить в избранное"
+            >
+              <Icon name="heart" size={16} />
+            </button>
+
+            <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end text-white">
+              <span className="text-xs font-semibold opacity-90">{uni.type}</span>
+              <div className="flex items-center gap-1 text-xs font-bold bg-amber-400/90 text-slate-900 px-2 py-0.5 rounded-md">
+                <Icon name="star" size={12} /> {uni.rating}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 group-hover:text-brand-600 transition-colors leading-snug">
+                {uni.name}
+              </h3>
+              <p className="text-xs text-slate-500 line-clamp-2 mt-2 leading-relaxed">
+                {uni.description}
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-600">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Программ обучения:</span>
+                <span className="font-semibold text-slate-800">{uni.programsCount} специальностей</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Стоимость (демо):</span>
+                <span className="font-semibold text-slate-800">{uni.costEstimate}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <a
+                href={`#/universities/${uni.id}`}
+                className="text-center py-2 px-3 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs transition"
+              >
+                Подробнее
+              </a>
+              <button
+                onClick={onToggleCompare}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold transition border flex items-center justify-center gap-1 ${
+                  isCompared 
+                    ? "bg-indigo-600 text-white border-indigo-600" 
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <Icon name="scale" size={14} />
+                {isCompared ? "В сравнении" : "Сравнить"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 2. КАТАЛОГ УНИВЕРСИТЕТОВ (С ФИЛЬТРАМИ И ПОИСКОМ)
+    // ==========================================
+    function UniversitiesCatalogPage({ universities, favorites, compareList, onToggleFav, onToggleCompare }) {
+      const [filterCity, setFilterCity] = useState("all");
+      const [filterType, setFilterType] = useState("all");
+      const [filterLanguage, setFilterLanguage] = useState("all");
+      const [onlyGrants, setOnlyGrants] = useState(false);
+      const [searchQuery, setSearchQuery] = useState("");
+      const [sortBy, setSortBy] = useState("rating");
+
+      const filtered = useMemo(() => {
+        return universities.filter(u => {
+          if (filterCity !== "all" && u.city !== filterCity) return false;
+          if (filterType !== "all" && !u.type.toLowerCase().includes(filterType.toLowerCase())) return false;
+          if (filterLanguage !== "all" && !u.language.toLowerCase().includes(filterLanguage.toLowerCase())) return false;
+          if (onlyGrants && !u.hasGrants) return false;
+          if (searchQuery.trim() !== "") {
+            const q = searchQuery.toLowerCase();
+            const matchName = u.name.toLowerCase().includes(q) || u.shortName.toLowerCase().includes(q);
+            const matchCity = u.city.toLowerCase().includes(q);
+            if (!matchName && !matchCity) return false;
+          }
+          return true;
+        }).sort((a, b) => {
+          if (sortBy === "rating") return b.rating - a.rating;
+          if (sortBy === "name") return a.name.localeCompare(b.name);
+          if (sortBy === "programs") return b.programsCount - a.programsCount;
+          return 0;
+        });
+      }, [universities, filterCity, filterType, filterLanguage, onlyGrants, searchQuery, sortBy]);
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="mb-8">
+            <h1 className="text-3xl font-extrabold text-slate-900">Каталог университетов Казахстана</h1>
+            <p className="text-sm text-slate-500 mt-1">Изучайте вузы, фильтруйте по городам, формам обучения и наличию грантов.</p>
+          </div>
+
+          <DemoAlert />
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Боковая панель фильтров (Desktop / Mobile) */}
+            <div className="lg:col-span-1 space-y-6 bg-white p-5 rounded-2xl border border-slate-200 h-fit">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                  <Icon name="filter" size={16} /> Фильтры
+                </span>
+                <button 
+                  onClick={() => {
+                    setFilterCity("all");
+                    setFilterType("all");
+                    setFilterLanguage("all");
+                    setOnlyGrants(false);
+                    setSearchQuery("");
+                  }}
+                  className="text-xs text-brand-600 hover:underline"
+                >
+                  Сбросить
+                </button>
+              </div>
+
+              {/* Город */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-600">Город</label>
+                <select 
+                  value={filterCity} 
+                  onChange={(e) => setFilterCity(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white"
+                >
+                  <option value="all">Все города</option>
+                  <option value="Астана">Астана</option>
+                  <option value="Алматы">Алматы</option>
+                  <option value="Караганда">Караганда</option>
+                </select>
+              </div>
+
+              {/* Тип вуза */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-600">Тип учреждения</label>
+                <select 
+                  value={filterType} 
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white"
+                >
+                  <option value="all">Любой статус</option>
+                  <option value="национальный">Национальный</option>
+                  <option value="государственный">Государственный</option>
+                  <option value="частный">Частный</option>
+                  <option value="автономная">Автономный (NU)</option>
+                </select>
+              </div>
+
+              {/* Язык обучения */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-600">Основной язык</label>
+                <select 
+                  value={filterLanguage} 
+                  onChange={(e) => setFilterLanguage(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-white"
+                >
+                  <option value="all">Все языки</option>
+                  <option value="казахский">Казахский</option>
+                  <option value="русский">Русский</option>
+                  <option value="английский">Английский</option>
+                </select>
+              </div>
+
+              {/* Наличие грантов чекбокс */}
+              <div className="pt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={onlyGrants}
+                    onChange={(e) => setOnlyGrants(e.target.checked)}
+                    className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"
+                  />
+                  <span className="text-xs font-medium text-slate-700">Только с возможностью гранта</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Основной блок: поиск, сортировка и карточки */}
+            <div className="lg:col-span-3 space-y-6">
+              <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-white p-3 rounded-2xl border border-slate-200">
+                <div className="relative w-full sm:w-80">
+                  <Icon name="search" size={16} className="absolute left-3 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Быстрый поиск по названию..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <span className="text-xs text-slate-500">Сортировка:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-xs p-2 rounded-xl border border-slate-200 bg-white font-medium text-slate-700"
+                  >
+                    <option value="rating">По рейтингу</option>
+                    <option value="name">По алфавиту</option>
+                    <option value="programs">По числу программ</option>
+                  </select>
+                </div>
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8 space-y-3">
+                  <Icon name="search-x" size={40} className="text-slate-300 mx-auto" />
+                  <div className="text-base font-bold text-slate-700">Ничего не найдено</div>
+                  <p className="text-xs text-slate-400">Попробуйте изменить условия фильтра или ключевое слово поиска.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filtered.map(uni => (
+                    <UniversityCard
+                      key={uni.id}
+                      uni={uni}
+                      isFav={favorites.universities.includes(uni.id)}
+                      isCompared={compareList.includes(uni.id)}
+                      onToggleFav={() => onToggleFav(uni.id)}
+                      onToggleCompare={() => onToggleCompare(uni.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 3. СТРАНИЦА УНИВЕРСИТЕТА (С ПРИКРЕПЛЕНИЕМ ФОТО)
+    // ==========================================
+    function UniversityDetailPage({ id, universities, favorites, compareList, onToggleFav, onToggleCompare, onUpdateUniversity }) {
+      const uni = universities.find(u => u.id === id);
+      const [activeTab, setActiveTab] = useState("about");
+      const fileInputRef = useRef(null);
+
+      if (!uni) {
+        return (
+          <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4">
+            <h2 className="text-2xl font-bold text-slate-800">Университет не найден</h2>
+            <a href="#/universities" className="text-brand-600 font-semibold hover:underline text-sm">
+              Вернуться в каталог
+            </a>
+          </div>
+        );
+      }
+
+      // Функция загрузки и смены фотографии (Base64 с сохранением в локальном хранилище)
+      const handlePhotoUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Валидация размера (до 3MB)
+        if (file.size > 3 * 1024 * 1024) {
+          alert("Размер файла не должен превышать 3 МБ");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const updated = { ...uni, coverPhoto: reader.result };
+          onUpdateUniversity(updated);
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const isFav = favorites.universities.includes(uni.id);
+      const isCompared = compareList.includes(uni.id);
+
+      return (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <a href="#/" className="hover:text-slate-800">Главная</a>
+            <span>/</span>
+            <a href="#/universities" className="hover:text-slate-800">Университеты</a>
+            <span>/</span>
+            <span className="text-slate-800 font-medium">{uni.name}</span>
+          </div>
+
+          <DemoAlert />
+
+          {/* Hero университета с функционалом прикрепления фото */}
+          <div className="relative rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+            <div className="relative h-64 sm:h-80 w-full bg-slate-900 group">
+              <img 
+                src={uni.coverPhoto} 
+                alt={uni.name} 
+                className="w-full h-full object-cover opacity-80"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+
+              {/* Кнопка смены / прикрепления фото */}
+              <div className="absolute top-4 right-4 z-20">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handlePhotoUpload} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+                <button
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/90 hover:bg-white text-slate-800 text-xs font-semibold shadow-lg backdrop-blur-sm transition"
+                  title="Загрузить собственное фото вуза"
+                >
+                  <Icon name="camera" size={16} className="text-brand-600" />
+                  Прикрепить / Изменить фото
+                </button>
+              </div>
+
+              {/* Информация внутри баннера */}
+              <div className="absolute bottom-6 left-6 right-6 text-white space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge color="blue">{uni.city}</Badge>
+                  <Badge color="purple">{uni.type}</Badge>
+                  <span className="text-xs bg-amber-400 text-slate-900 font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <Icon name="star" size={12} /> {uni.rating}
+                  </span>
+                </div>
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">{uni.name}</h1>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">{uni.description}</p>
+              </div>
+            </div>
+
+            {/* Панель быстрых действий */}
+            <div className="p-4 sm:p-6 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-6 text-xs text-slate-600">
+                <div>
+                  <span className="text-slate-400 block">Языки:</span>
+                  <span className="font-semibold text-slate-800">{uni.language}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">Форма:</span>
+                  <span className="font-semibold text-slate-800">{uni.studyFormat}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">Программ:</span>
+                  <span className="font-semibold text-slate-800">{uni.programsCount}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => onToggleFav(uni.id)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition border ${
+                    isFav ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <Icon name="heart" size={16} />
+                  {isFav ? "В избранном" : "В избранное"}
+                </button>
+
+                <button
+                  onClick={() => onToggleCompare(uni.id)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition ${
+                    isCompared ? "bg-brand-600 text-white" : "bg-slate-900 hover:bg-slate-800 text-white"
+                  }`}
+                >
+                  <Icon name="scale" size={16} />
+                  {isCompared ? "В сравнении" : "Сравнить"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Вкладки (Tabs) */}
+          <div className="border-b border-slate-200 flex space-x-6 text-sm font-semibold">
+            {[
+              { id: "about", label: "Об университете", icon: "info" },
+              { id: "programs", label: "Программы", icon: "book-open" },
+              { id: "admission", label: "Поступление", icon: "file-text" },
+              { id: "cost", label: "Стоимость и гранты", icon: "banknote" },
+              { id: "contacts", label: "Контакты", icon: "map-pin" }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`pb-3 flex items-center gap-2 transition border-b-2 ${
+                  activeTab === tab.id 
+                    ? "border-brand-600 text-brand-600" 
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <Icon name={tab.icon} size={16} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Контент вкладок */}
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-6">
+            {activeTab === "about" && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-900">Общая информация</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{uni.description}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-xs text-slate-400 block">Город кампуса</span>
+                    <span className="text-sm font-bold text-slate-800">{uni.city}</span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-xs text-slate-400 block">Статус аккредитации</span>
+                    <span className="text-sm font-bold text-emerald-600">Государственная / IQAA</span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-xs text-slate-400 block">Библиотека и ресурсы</span>
+                    <span className="text-sm font-bold text-slate-800">Доступны 24/7</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "programs" && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-900">Популярные направления подготовки</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {uni.programs.map((prog, idx) => (
+                    <div key={idx} className="p-3.5 rounded-xl border border-slate-200 flex items-center justify-between hover:bg-slate-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs">
+                          {idx + 1}
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">{prog}</span>
+                      </div>
+                      <Badge color="blue">Бакалавриат</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "admission" && (
+              <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
+                <h3 className="text-lg font-bold text-slate-900">Этапы и требования к поступлению</h3>
+                <p><strong>Вступительные требования:</strong> {uni.admissionReqs}</p>
+                <div className="space-y-2 pt-2">
+                  <h4 className="font-semibold text-slate-800 text-xs uppercase tracking-wider">Необходимый пакет документов:</h4>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    <li>Аттестат об общем среднем образовании или диплом ТиПО с приложением;</li>
+                    <li>Сертификат ЕНТ текущего года с установленным пороговым баллом;</li>
+                    <li>Медицинская справка по форме 075/у со снимком флюорографии;</li>
+                    <li>6 фотографий размером 3х4 см;</li>
+                    <li>Удостоверение личности (оригинал и копия).</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "cost" && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-900">Стоимость и варианты финансирования</h3>
+                <div className="p-4 rounded-xl bg-brand-50 border border-brand-200">
+                  <div className="text-xs text-brand-700 uppercase font-semibold">Ориентировочная стоимость (демо)</div>
+                  <div className="text-2xl font-extrabold text-brand-900 mt-1">{uni.costEstimate}</div>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  В данном вузе действуют государственные образовательные гранты Министерства науки и высшего образования РК, а также ректорские гранты и социальные скидки для олимпиадников и отличников.
+                </p>
+              </div>
+            )}
+
+            {activeTab === "contacts" && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold text-slate-900">Контакты и расположение</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="p-4 rounded-xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400">Адрес кампуса</span>
+                    <p className="font-semibold text-slate-800">{uni.address}</p>
+                  </div>
+                  <div className="p-4 rounded-xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400">Телефон приемной</span>
+                    <p className="font-semibold text-slate-800">{uni.phone}</p>
+                  </div>
+                  <div className="p-4 rounded-xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400">Официальный сайт</span>
+                    <p><a href={uni.website} target="_blank" rel="noreferrer" className="text-brand-600 font-bold hover:underline">{uni.website}</a></p>
+                  </div>
+                </div>
+
+                {/* Интерактивный плейсхолдер карты кампуса */}
+                <div className="relative h-48 rounded-2xl bg-slate-100 border border-slate-200 flex flex-col items-center justify-center text-center p-4">
+                  <Icon name="map" size={32} className="text-brand-600 mb-2" />
+                  <span className="text-xs font-bold text-slate-800">Интерактивная карта кампуса {uni.shortName}</span>
+                  <span className="text-[11px] text-slate-400">{uni.address}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 4. КАТАЛОГ СПЕЦИАЛЬНОСТЕЙ
+    // ==========================================
+    function SpecialtiesPage({ favorites, onToggleFav }) {
+      const specialties = StorageService.getSpecialties();
+      const [selectedCat, setSelectedCat] = useState("all");
+
+      const categories = ["all", "IT", "Право", "Финансы", "Медицина", "Инженерия", "Международные отношения"];
+
+      const filtered = selectedCat === "all" ? specialties : specialties.filter(s => s.category === selectedCat);
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900">Образовательные направления и специальности</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Объективный каталог профессий без продвижения отдельных направлений. Изучайте профильные предметы ЕНТ и перспективы.
+            </p>
+          </div>
+
+          <DemoAlert />
+
+          {/* Фильтр по категориям */}
+          <div className="flex flex-wrap gap-2">
+            {categories.map(c => (
+              <button
+                key={c}
+                onClick={() => setSelectedCat(c)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                  selectedCat === c 
+                    ? "bg-brand-600 text-white shadow-md shadow-brand-500/20" 
+                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                {c === "all" ? "Все направления" : c}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map(spec => (
+              <div key={spec.id} className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col justify-between hover:shadow-lg transition">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <Badge color="purple">{spec.category}</Badge>
+                    <button
+                      onClick={() => onToggleFav(spec.id)}
+                      className={`p-1.5 rounded-lg transition ${favorites.specialties.includes(spec.id) ? "text-rose-500 bg-rose-50" : "text-slate-400 hover:text-slate-600"}`}
+                      title="Сохранить специальность"
+                    >
+                      <Icon name="heart" size={18} />
+                    </button>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">{spec.title}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{spec.description}</p>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-slate-100 space-y-2 text-xs">
+                  <div>
+                    <span className="text-slate-400 block font-medium">Профильные предметы ЕНТ:</span>
+                    <span className="font-semibold text-brand-700">{spec.subjects}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">Кем работать:</span>
+                    <span className="text-slate-700">{spec.careers}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-medium">Где изучать (примеры):</span>
+                    <span className="text-slate-700 font-medium">{spec.universities.join(", ")}</span>
+                  </div>
+                  <a
+                    href="#/universities"
+                    className="block text-center mt-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-semibold transition"
+                  >
+                    Посмотреть университеты
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 5. СРАВНЕНИЕ УНИВЕРСИТЕТОВ (ТАБЛИЦА)
+    // ==========================================
+    function ComparePage({ compareList, universities, onRemoveCompare, onClearCompare }) {
+      const selectedUnis = universities.filter(u => compareList.includes(u.id));
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-900">Сравнение университетов</h1>
+              <p className="text-sm text-slate-500 mt-1">Объективное сопоставление до 3-х выбранных учебных заведений.</p>
+            </div>
+            {selectedUnis.length > 0 && (
+              <button
+                onClick={onClearCompare}
+                className="px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition"
+              >
+                Очистить сравнение
+              </button>
+            )}
+          </div>
+
+          <DemoAlert />
+
+          {selectedUnis.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
+              <Icon name="scale" size={48} className="text-slate-300 mx-auto" />
+              <h3 className="text-base font-bold text-slate-700">Вы пока не выбрали университеты для сравнения</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Перейдите в каталог и нажмите кнопку «Сравнить» на карточках интересующих вас вузов.
+              </p>
+              <a
+                href="#/universities"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-xs hover:bg-brand-700 transition"
+              >
+                Перейти в каталог
+              </a>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[650px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-1/4">Параметр</th>
+                    {selectedUnis.map(u => (
+                      <th key={u.id} className="p-4 w-1/4 align-top">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-sm text-slate-900">{u.name}</span>
+                          <button 
+                            onClick={() => onRemoveCompare(u.id)}
+                            className="text-slate-400 hover:text-rose-500 p-1 rounded"
+                            title="Убрать из сравнения"
+                          >
+                            <Icon name="x" size={16} />
+                          </button>
+                        </div>
+                        <span className="text-xs font-normal text-slate-500">{u.city}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Город кампуса</td>
+                    {selectedUnis.map(u => <td key={u.id} className="p-4 font-medium text-slate-800">{u.city}</td>)}
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Тип учреждения</td>
+                    {selectedUnis.map(u => <td key={u.id} className="p-4 text-slate-700">{u.type}</td>)}
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Рейтинг (UI)</td>
+                    {selectedUnis.map(u => (
+                      <td key={u.id} className="p-4">
+                        <span className="font-bold text-amber-600 flex items-center gap-1">
+                          <Icon name="star" size={12} /> {u.rating} / 5.0
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Количество программ</td>
+                    {selectedUnis.map(u => <td key={u.id} className="p-4 font-bold text-slate-800">{u.programsCount}</td>)}
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Наличие грантов</td>
+                    {selectedUnis.map(u => (
+                      <td key={u.id} className="p-4">
+                        {u.hasGrants ? <Badge color="green">Доступны</Badge> : <Badge color="amber">Только платно</Badge>}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Стоимость (Демо)</td>
+                    {selectedUnis.map(u => <td key={u.id} className="p-4 text-slate-700">{u.costEstimate}</td>)}
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Язык обучения</td>
+                    {selectedUnis.map(u => <td key={u.id} className="p-4 text-slate-700">{u.language}</td>)}
+                  </tr>
+                  <tr>
+                    <td className="p-4 font-semibold text-slate-600 bg-slate-50/50">Форма обучения</td>
+                    {selectedUnis.map(u => <td key={u.id} className="p-4 text-slate-700">{u.studyFormat}</td>)}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 6. КАЛЬКУЛЯТОР ПОСТУПЛЕНИЯ
+    // ==========================================
+    function CalculatorPage({ universities }) {
+      const [score, setScore] = useState(95);
+      const [direction, setDirection] = useState("IT");
+      const [city, setCity] = useState("all");
+      const [calculated, setCalculated] = useState(false);
+
+      const handleCalculate = (e) => {
+        e.preventDefault();
+        setCalculated(true);
+      };
+
+      // Демонстрационная логика подбора
+      const matched = universities.filter(u => {
+        if (city !== "all" && u.city !== city) return false;
+        return true;
+      });
+
+      return (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900">Калькулятор поступления</h1>
+            <p className="text-sm text-slate-500 mt-1">Оцените соответствие критериям университетов на основе набранных баллов ЕНТ.</p>
+          </div>
+
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg text-xs text-amber-800 leading-relaxed">
+            <strong>Важное предупреждение:</strong> Расчет носит сугубо демонстрационный характер. Проходные баллы и правила поступления ежегодно меняются по решению Министерства науки и высшего образования РК. Всегда проверяйте актуальные правила на официальном сайте выбранного университета.
+          </div>
+
+          <form onSubmit={handleCalculate} className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700">Баллы ЕНТ (общие из 140):</label>
+                <input
+                  type="number"
+                  min="50"
+                  max="140"
+                  value={score}
+                  onChange={(e) => setScore(Number(e.target.value))}
+                  className="w-full p-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700">Интересующее направление:</label>
+                <select
+                  value={direction}
+                  onChange={(e) => setDirection(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-slate-200 text-sm bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                >
+                  <option value="IT">Информационные технологии</option>
+                  <option value="Право">Юриспруденция и Право</option>
+                  <option value="Финансы">Экономика и Финансы</option>
+                  <option value="Инженерия">Инженерия</option>
+                  <option value="Медицина">Медицина</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700">Желаемый город:</label>
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-slate-200 text-sm bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                >
+                  <option value="all">Любой город</option>
+                  <option value="Астана">Астана</option>
+                  <option value="Алматы">Алматы</option>
+                  <option value="Караганда">Караганда</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-md shadow-brand-500/25 transition"
+            >
+              Рассчитать шансы
+            </button>
+          </form>
+
+          {calculated && (
+            <div className="space-y-6 pt-4">
+              <div className="bg-brand-50/70 p-5 rounded-2xl border border-brand-200">
+                <h3 className="text-sm font-bold text-brand-900 mb-2">Ваши параметры расчета:</h3>
+                <div className="grid grid-cols-3 gap-2 text-xs text-brand-800">
+                  <div>Баллы: <strong>{score} / 140</strong></div>
+                  <div>Направление: <strong>{direction}</strong></div>
+                  <div>Город: <strong>{city === "all" ? "Все города" : city}</strong></div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-base font-bold text-slate-800">Результаты демонстрационного подбора:</h4>
+                <div className="space-y-3">
+                  {matched.map(uni => (
+                    <div key={uni.id} className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="font-bold text-slate-900 text-sm">{uni.name}</div>
+                        <div className="text-xs text-slate-500">{uni.city} • {uni.type}</div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {score >= 100 ? "соответствует заданным критериям" : "требует дополнительной проверки"}
+                        </span>
+                        <a
+                          href={`#/universities/${uni.id}`}
+                          className="text-xs font-semibold text-brand-600 hover:underline"
+                        >
+                          Подробнее
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 7. ПРОФОРИЕНТАЦИОННЫЙ ТЕСТ (10 ВОПРОСОВ)
+    // ==========================================
+    function QuizPage({ onResultSave }) {
+      const [currentQ, setCurrentQ] = useState(0);
+      const [answers, setAnswers] = useState({});
+      const [finished, setFinished] = useState(false);
+
+      const handleSelectOption = (category) => {
+        const nextAnswers = { ...answers, [currentQ]: category };
+        setAnswers(nextAnswers);
+
+        if (currentQ < QUIZ_QUESTIONS.length - 1) {
+          setCurrentQ(currentQ + 1);
+        } else {
+          setFinished(true);
+          // Подсчет преобладающей категории
+          const counts = {};
+          Object.values(nextAnswers).forEach(cat => {
+            counts[cat] = (counts[cat] || 0) + 1;
+          });
+          const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+          const topCategory = sorted[0] ? sorted[0][0] : "IT";
+          onResultSave({ topCategory, date: new Date().toLocaleDateString() });
+        }
+      };
+
+      const restart = () => {
+        setAnswers({});
+        setCurrentQ(0);
+        setFinished(false);
+      };
+
+      return (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900">Тест: Какое направление тебе подходит?</h1>
+            <p className="text-sm text-slate-500 mt-1">Ответьте на 10 простых вопросов и узнайте сферу, близкую к вашим интересам.</p>
+          </div>
+
+          <div className="bg-slate-100 p-4 rounded-xl text-xs text-slate-600">
+            <strong>Обратите внимание:</strong> Результат теста носит исключительно ознакомительный характер, не является психологическим диагнозом или окончательной рекомендацией.
+          </div>
+
+          {!finished ? (
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+              <div className="flex justify-between items-center text-xs font-semibold text-slate-400">
+                <span>Вопрос {currentQ + 1} из {QUIZ_QUESTIONS.length}</span>
+                <span>{Math.round(((currentQ + 1) / QUIZ_QUESTIONS.length) * 100)}%</span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-brand-600 h-full transition-all duration-300" 
+                  style={{ width: `${((currentQ + 1) / QUIZ_QUESTIONS.length) * 100}%` }}
+                ></div>
+              </div>
+
+              <h2 className="text-lg font-bold text-slate-900 pt-2">
+                {QUIZ_QUESTIONS[currentQ].question}
+              </h2>
+
+              <div className="space-y-3">
+                {QUIZ_QUESTIONS[currentQ].options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectOption(opt.category)}
+                    className="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition text-sm font-medium text-slate-800 flex items-center justify-between group"
+                  >
+                    <span>{opt.label}</span>
+                    <Icon name="arrow-right" size={16} className="text-slate-300 group-hover:text-brand-600 group-hover:translate-x-1 transition-all" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-6 shadow-sm">
+              <div className="w-16 h-16 bg-brand-50 text-brand-600 rounded-full flex items-center justify-center mx-auto">
+                <Icon name="award" size={32} />
+              </div>
+              <div>
+                <span className="text-xs uppercase font-bold tracking-wider text-brand-600">Ваш результат</span>
+                <h2 className="text-2xl font-extrabold text-slate-900 mt-1">Рекомендованное направление определено</h2>
+              </div>
+
+              <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                На основе ваших выборов вам наиболее близки программы кластера: <strong>IT и Информационные технологии</strong>, а также аналитические специальности.
+              </p>
+
+              <div className="flex justify-center gap-3 pt-4">
+                <a
+                  href="#/specialties"
+                  className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs transition"
+                >
+                  Посмотреть специальности
+                </a>
+                <button
+                  onClick={restart}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
+                >
+                  Пройти заново
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 8. ИЗБРАННОЕ
+    // ==========================================
+    function FavoritesPage({ favorites, universities, specialties, onToggleFavUni, onToggleFavSpec }) {
+      const favUnis = universities.filter(u => favorites.universities.includes(u.id));
+      const favSpecs = specialties.filter(s => favorites.specialties.includes(s.id));
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900">Мои избранные</h1>
+            <p className="text-sm text-slate-500 mt-1">Сохраненные университеты и образовательные программы.</p>
+          </div>
+
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Icon name="graduation-cap" size={20} className="text-brand-600" />
+              Университеты ({favUnis.length})
+            </h2>
+            {favUnis.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-400">
+                Вы еще не сохраняли университеты в избранное.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {favUnis.map(uni => (
+                  <div key={uni.id} className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 relative">
+                    <img src={uni.coverPhoto} alt={uni.name} className="h-32 w-full object-cover rounded-xl" />
+                    <h3 className="font-bold text-sm text-slate-900">{uni.name}</h3>
+                    <div className="text-xs text-slate-500">{uni.city}</div>
+                    <div className="flex justify-between items-center pt-2">
+                      <a href={`#/universities/${uni.id}`} className="text-xs text-brand-600 font-bold hover:underline">Подробнее</a>
+                      <button onClick={() => onToggleFavUni(uni.id)} className="text-rose-500 text-xs font-semibold hover:underline">Удалить</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6 pt-6">
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Icon name="book-open" size={20} className="text-brand-600" />
+              Специальности ({favSpecs.length})
+            </h2>
+            {favSpecs.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-400">
+                Вы еще не сохраняли специальности.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {favSpecs.map(spec => (
+                  <div key={spec.id} className="bg-white rounded-xl border border-slate-200 p-4 flex justify-between items-center">
+                    <div>
+                      <div className="font-bold text-sm text-slate-800">{spec.title}</div>
+                      <div className="text-xs text-slate-500">Предметы: {spec.subjects}</div>
+                    </div>
+                    <button onClick={() => onToggleFavSpec(spec.id)} className="text-rose-500 text-xs font-semibold hover:underline">
+                      Удалить
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 9. АВТОРИЗАЦИЯ (ДЕМО СИСТЕМА)
+    // ==========================================
+    function AuthPage({ onLogin }) {
+      const [email, setEmail] = useState("student@uniguide.kz");
+      const [password, setPassword] = useState("demo123");
+      const [name, setName] = useState("Ануарбек Нурмуратов");
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        onLogin({
+          name: name || "Абитуриент",
+          email: email,
+          role: email.includes("admin") ? "admin" : "student"
+        });
+      };
+
+      return (
+        <div className="max-w-md mx-auto px-4 py-16">
+          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-brand-600 text-white rounded-2xl flex items-center justify-center mx-auto font-bold shadow-md shadow-brand-500/20">
+                <Icon name="log-in" size={24} />
+              </div>
+              <h1 className="text-2xl font-extrabold text-slate-900">Войти в UniGuide KZ</h1>
+              <p className="text-xs text-slate-500">Демонстрационная система входа для защиты проекта</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Ваше имя:</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full p-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Email:</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  required
+                />
+                <span className="text-[10px] text-slate-400">Подсказка: укажите admin@uniguide.kz для входа с правами администратора</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">Пароль:</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition"
+              >
+                Войти в кабинет
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 10. ЛИЧНЫЙ КАБИНЕТ (DASHBOARD)
+    // ==========================================
+    function ProfilePage({ user, onLogout, universities, favorites }) {
+      if (!user) {
+        return (
+          <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
+            <h2 className="text-lg font-bold text-slate-800">Вы не авторизованы</h2>
+            <a href="#/login" className="inline-block px-4 py-2 bg-brand-600 text-white text-xs font-semibold rounded-xl">Войти</a>
+          </div>
+        );
+      }
+
+      const quizRes = StorageService.getQuizResult();
+
+      return (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-xl font-bold uppercase shadow-lg shadow-brand-500/20">
+                {user.name.slice(0, 2)}
+              </div>
+              <div>
+                <h1 className="text-2xl font-extrabold text-slate-900">{user.name}</h1>
+                <div className="text-xs text-slate-500">{user.email} • {user.role === "admin" ? "Администратор" : "Абитуриент"}</div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              {user.role === "admin" && (
+                <a href="#/admin" className="px-4 py-2 rounded-xl bg-purple-50 text-purple-700 text-xs font-semibold border border-purple-200">
+                  Панель администратора
+                </a>
+              )}
+              <button
+                onClick={onLogout}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
+              >
+                Выйти
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200">
+              <span className="text-xs font-bold text-slate-400 uppercase">Избранных вузов</span>
+              <div className="text-3xl font-extrabold text-brand-600 mt-2">{favorites.universities.length}</div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200">
+              <span className="text-xs font-bold text-slate-400 uppercase">Сохраненных специальностей</span>
+              <div className="text-3xl font-extrabold text-indigo-600 mt-2">{favorites.specialties.length}</div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200">
+              <span className="text-xs font-bold text-slate-400 uppercase">Тест направлений</span>
+              <div className="text-base font-bold text-slate-800 mt-2">
+                {quizRes ? quizRes.topCategory : "Не пройден"}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 11. АДМИН-ПАНЕЛЬ (УПРАВЛЕНИЕ ВУЗАМИ)
+    // ==========================================
+    function AdminPage({ universities, onSaveUniversities }) {
+      const [list, setList] = useState(universities);
+      const [showModal, setShowModal] = useState(false);
+      const [editItem, setEditItem] = useState(null);
+
+      // Форма добавления/редактирования
+      const [name, setName] = useState("");
+      const [city, setCity] = useState("Астана");
+      const [type, setType] = useState("Национальный");
+      const [photo, setPhoto] = useState("");
+
+      const openAdd = () => {
+        setEditItem(null);
+        setName("");
+        setCity("Астана");
+        setType("Национальный");
+        setPhoto("https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1000&q=80");
+        setShowModal(true);
+      };
+
+      const openEdit = (uni) => {
+        setEditItem(uni);
+        setName(uni.name);
+        setCity(uni.city);
+        setType(uni.type);
+        setPhoto(uni.coverPhoto);
+        setShowModal(true);
+      };
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        let next;
+        if (editItem) {
+          next = list.map(u => u.id === editItem.id ? { ...u, name, city, type, coverPhoto: photo } : u);
+        } else {
+          const newUni = {
+            id: "uni_" + Date.now(),
+            name,
+            shortName: name.slice(0, 4),
+            city,
+            type,
+            rating: 4.8,
+            programsCount: 20,
+            hasGrants: true,
+            costEstimate: "Демо: от 1 000 000 ₸",
+            language: "Казахский, Русский",
+            studyFormat: "Очная",
+            description: "Новый университет, добавленный через админ-панель платформы.",
+            coverPhoto: photo || "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1000&q=80",
+            address: `г. ${city}`,
+            website: "https://example.kz",
+            phone: "+7 (777) 000-00-00",
+            programs: ["IT", "Менеджмент"],
+            admissionReqs: "ЕНТ",
+            isDemo: true
+          };
+          next = [newUni, ...list];
+        }
+        setList(next);
+        onSaveUniversities(next);
+        setShowModal(false);
+      };
+
+      const handleDelete = (id) => {
+        if (!confirm("Вы уверены, что хотите удалить университет?")) return;
+        const next = list.filter(u => u.id !== id);
+        setList(next);
+        onSaveUniversities(next);
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-900">Административная панель</h1>
+              <p className="text-sm text-slate-500 mt-1">Управление каталогом вузов, добавление записей и загрузка обложек.</p>
+            </div>
+            <button
+              onClick={openAdd}
+              className="px-4 py-2.5 bg-brand-600 text-white font-bold text-xs rounded-xl hover:bg-brand-700 transition flex items-center gap-2"
+            >
+              <Icon name="plus" size={16} /> Добавить вуз
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
+                  <th className="p-4">Название</th>
+                  <th className="p-4">Город</th>
+                  <th className="p-4">Тип</th>
+                  <th className="p-4 text-right">Действия</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {list.map(u => (
+                  <tr key={u.id} className="hover:bg-slate-50/50">
+                    <td className="p-4 font-bold text-slate-800">{u.name}</td>
+                    <td className="p-4 text-slate-600">{u.city}</td>
+                    <td className="p-4 text-slate-600">{u.type}</td>
+                    <td className="p-4 text-right space-x-2">
+                      <button onClick={() => openEdit(u)} className="text-brand-600 hover:underline font-semibold">Редактировать</button>
+                      <button onClick={() => handleDelete(u.id)} className="text-rose-600 hover:underline font-semibold">Удалить</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Модальное окно */}
+          {showModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <h3 className="text-base font-bold text-slate-900">{editItem ? "Редактировать вуз" : "Добавить новый вуз"}</h3>
+                  <button onClick={() => setShowModal(false)}><Icon name="x" size={18} /></button>
+                </div>
+                <form onSubmit={handleSave} className="space-y-3 text-xs">
+                  <div>
+                    <label className="font-semibold block mb-1">Название вуза:</label>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full p-2.5 border rounded-xl" />
+                  </div>
+                  <div>
+                    <label className="font-semibold block mb-1">Город:</label>
+                    <input type="text" value={city} onChange={e => setCity(e.target.value)} required className="w-full p-2.5 border rounded-xl" />
+                  </div>
+                  <div>
+                    <label className="font-semibold block mb-1">Тип учреждения:</label>
+                    <input type="text" value={type} onChange={e => setType(e.target.value)} required className="w-full p-2.5 border rounded-xl" />
+                  </div>
+                  <div>
+                    <label className="font-semibold block mb-1">URL фото / обложки:</label>
+                    <input type="text" value={photo} onChange={e => setPhoto(e.target.value)} className="w-full p-2.5 border rounded-xl" />
+                  </div>
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-xl">Отмена</button>
+                    <button type="submit" className="px-4 py-2 bg-brand-600 text-white rounded-xl font-bold">Сохранить</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 12. FAQ АККОРДЕОН
+    // ==========================================
+    function FAQAccordion() {
+      const [openIdx, setOpenIdx] = useState(null);
+      const faqs = [
+        { q: "Как пользоваться платформой UniGuide KZ?", a: "Вы можете искать вузы через глобальный поиск, фильтровать каталог по городам и наличию грантов, сравнивать до 3-х университетов в сравнительной таблице и сохранять избранные программы в один клик." },
+        { q: "Где брать актуальные проходные баллы и стоимость?", a: "На платформе данные представлены в качестве демонстрационных ориентиров. Официальные и точные проходные баллы устанавливаются Министерством науки и высшего образования РК по итогам конкурса ЕНТ." },
+        { q: "Можно ли доверять калькулятору шансов?", a: "Калькулятор анализирует совпадение введенного балла с пороговыми значениями прошлых лет и носит рекомендательный характер без гарантий зачисления." },
+        { q: "Как работает тест направлений?", a: "Тест состоит из 10 вопросов, выявляющих склонность к определенной группе дисциплин: IT, праву, медицине, финансам или инженерии." },
+        { q: "Как прикрепить собственное фото университета?", a: "Перейдите на страницу любого университета и нажмите кнопку «Прикрепить / Изменить фото» в верхнем правом углу баннера." }
+      ];
+
+      return (
+        <div className="space-y-3">
+          {faqs.map((f, i) => (
+            <div key={i} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <button
+                onClick={() => setOpenIdx(openIdx === i ? null : i)}
+                className="w-full text-left p-4 text-sm font-bold text-slate-800 flex justify-between items-center hover:bg-slate-50 transition"
+              >
+                <span>{f.q}</span>
+                <Icon name={openIdx === i ? "chevron-up" : "chevron-down"} size={18} className="text-slate-400" />
+              </button>
+              {openIdx === i && (
+                <div className="p-4 pt-0 text-xs text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                  {f.a}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 13. СТРАНИЦА 404 (NOT FOUND)
+    // ==========================================
+    function NotFoundPage() {
+      return (
+        <div className="max-w-md mx-auto px-4 py-24 text-center space-y-4">
+          <div className="text-6xl font-black text-brand-600">404</div>
+          <h2 className="text-xl font-bold text-slate-800">Страница не найдена</h2>
+          <p className="text-xs text-slate-500">Запрошенный раздел не существует либо ссылка устарела.</p>
+          <a
+            href="#/"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition"
+          >
+            Вернуться на главную
+          </a>
+        </div>
+      );
+    }
+
+    // Монтирование приложения
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
